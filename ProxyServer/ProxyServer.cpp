@@ -84,7 +84,6 @@ void ProxyServer::Initialization()
 
 void ProxyServer::Stop() {
 	exitState = ExitState::Soft;
-	SetEvent(exitEvent);
 	int result = SetEvent(exitEvent);
 	if (result == 0) {
 		throw std::exception("Dispose error");
@@ -110,9 +109,14 @@ ProxyServer::~ProxyServer()
 	if (!isDisposed) {
 		Dispose();
 	}
-	CloseHandle(exitEvent);
+	bool isBad = CloseHandle(exitEvent);
 	if (init) {
 		WSACleanup();
+	}
+
+	if (isBad) {
+		//nobody is inhereted from ProxyServer, so ok.
+		throw std::exception("Dispose error");
 	}
 }
 
@@ -234,7 +238,7 @@ void ProxyServer::Update()
 
 		}
 
-		if ((WSANetWork.lNetworkEvents&FD_ACCEPT) && WSANetWork.iErrorCode[FD_ACCEPT_BIT] == 0 && exitState != ExitState::Soft)//3
+		if ((WSANetWork.lNetworkEvents&FD_ACCEPT) && WSANetWork.iErrorCode[FD_ACCEPT_BIT] == 0 && exitState != ExitState::Soft)
 		{
 
 			UpdateEvent(EventCase::Accept, clientData.socketData[result].get());

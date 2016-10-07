@@ -163,7 +163,7 @@ EventState TCPServer::onClose(EventCase ec)
 void TCPServer::cachePage()
 {
 	if (cacheState == CacheState::NeedCache) {
-			cache->Add(clientSide->requestCommon.serverAdress, Etag, answer);
+		cache->Add(clientSide->requestCommon.serverAdress, Etag, answer);
 	}
 }
 
@@ -185,10 +185,20 @@ void TCPServer::Restart(SOCKET tSocket)
 	//recreate socket
 	closesocket(socketHandler);
 
+
 	socketHandler = tSocket;
-	WSACloseEvent(WSAEvent);
+	if (!WSACloseEvent(WSAEvent)) {
+		throw std::exception("Can't close WSA event");
+	}
+
 	WSAEvent = WSACreateEvent();
-	WSAEventSelect(socketHandler, WSAEvent, FD_ACCEPT | FD_CLOSE | FD_READ | FD_WRITE | FD_CONNECT);
+	if (WSAEvent == 0) {
+		throw std::exception("Can't create WSA event");
+	}
+
+	if (WSAEventSelect(socketHandler, WSAEvent, FD_CLOSE | FD_READ | FD_WRITE | FD_CONNECT)) {
+		throw std::exception("Can't select event");
+	}
 
 	requestCommonServer = RequestCommonServer();
 	lastTime = clock();
