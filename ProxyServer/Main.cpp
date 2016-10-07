@@ -2,9 +2,7 @@
 #include "ProxyServer.h"
 #pragma comment(lib, "Ws2_32.lib")
 
-
-
-std::thread* serverThread;
+ 
 int main() {
 
 	
