@@ -2,13 +2,8 @@
 #include "ProxyServer.h"
 #pragma comment(lib, "Ws2_32.lib")
 
- 
 int main() {
 
-	
-
-
-	
 	bool isServerRun = true;
 	ProxyServer pServer(3000, 7777);
 
