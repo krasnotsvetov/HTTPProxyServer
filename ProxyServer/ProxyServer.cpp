@@ -78,7 +78,6 @@ void ProxyServer::Initialization()
 	}
 	mainAcceptSocket->lastTime = clock();
 	clientData.AddClient(std::move(mainAcceptSocket));
-
 }
 
 
@@ -110,13 +109,15 @@ ProxyServer::~ProxyServer()
 		Dispose();
 	}
 	bool isBad = CloseHandle(exitEvent);
+	delete cache;
 	if (init) {
 		WSACleanup();
 	}
 
 	if (isBad) {
+		//TODO Log
 		//nobody is inhereted from ProxyServer, so ok.
-		throw std::exception("Dispose error");
+		//throw std::exception("Dispose error");
 	}
 }
 
@@ -339,12 +340,28 @@ void ProxyServer::UpdateEvent(EventCase ec, TimeoutSocket * tSocket)
 
 EventState ProxyServer::onAccept(TimeoutSocket* fSocket)
 {
-	TCPClient* tcpClient = new TCPClient(accept(fSocket->socketHandler, NULL, NULL), cache);
-	TCPServer* tcpServer = new TCPServer(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP), cache);
-	tcpClient->serverSide = tcpServer;
-	tcpServer->clientSide = tcpClient;
-	tcpClient->lastTime = tcpServer->lastTime = clock();
-	clientData.AddClient(std::unique_ptr<TCPClient>(tcpClient));
-	clientData.AddClient(std::unique_ptr<TCPServer>(tcpServer));
-	return EventState::Success;
+	try {
+		SOCKET browser = accept(fSocket->socketHandler, NULL, NULL);
+		SOCKET server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		if (browser == 0 || server == 0) {
+			throw std::exception("Can't create socket");
+		}
+		std::unique_ptr<TCPClient> tcpClient = std::unique_ptr<TCPClient>(new TCPClient(browser, cache));
+		std::unique_ptr<TCPServer> tcpServer = std::unique_ptr<TCPServer>(new TCPServer(server, cache));
+		tcpClient->serverSide = tcpServer.get();
+		tcpServer->clientSide = tcpClient.get();
+		tcpClient->lastTime = tcpServer->lastTime = clock();
+		clientData.AddClient(std::move(tcpClient));
+		try {
+			clientData.AddClient(std::move(tcpServer));
+		}
+		catch (...) {
+			clientData.Remove(tcpClient.get());
+			throw;
+		}
+		return EventState::Success;
+	}
+	catch (...) {
+		return EventState::Failed;
+	}
 }

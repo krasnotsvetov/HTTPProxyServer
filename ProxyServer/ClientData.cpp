@@ -8,9 +8,16 @@
 
 void ClientData::AddClient(std::unique_ptr<TimeoutSocket> socket)
 {
-
+	
 	this->eventData.push_back(socket->WSAEvent);
-	this->socketData.push_back(std::move(socket));
+	
+	try {
+		this->socketData.push_back(std::move(socket));
+	}
+	catch (...) {
+		this->eventData.pop_back();
+		throw;
+	}
 }
 
 
